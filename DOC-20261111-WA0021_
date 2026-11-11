@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sınav Saati</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--text:#0f172a;--muted:#64748b;--accent:#1d4ed8;--warn:#b91c1c;--line:#dbe2ee;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1220;--card:#131c2e;--text:#f1f5f9;--muted:#94a3b8;--accent:#60a5fa;--warn:#f87171;--line:#243049;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0b1220;--card:#131c2e;--text:#f1f5f9;--muted:#94a3b8;--accent:#60a5fa;--warn:#f87171;--line:#243049;color-scheme:dark}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;padding:2vh 3vw;box-sizing:border-box;gap:2vh}
+.top{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center}
+label{color:var(--muted);font-size:1.1rem}
+select,input{font:inherit;font-size:1.3rem;padding:8px 12px;border-radius:10px;border:2px solid var(--line);background:var(--card);color:var(--text)}
+.grid{flex:1;width:100%;max-width:1400px;display:grid;grid-template-columns:1fr 1fr;gap:3vw;align-items:stretch}
+@media (max-width:560px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:2px solid var(--line);border-radius:24px;padding:3vh 2vw;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2vh}
+h2{margin:0;font-size:clamp(1.4rem,3vw,2.6rem);font-weight:600}
+.big{font-size:clamp(3rem,9vw,10rem);font-weight:700;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.big small{font-size:.28em;color:var(--muted);font-weight:500}
+.unit{font-size:clamp(1.4rem,3vw,2.6rem);color:var(--muted)}
+.sub{font-size:1.2rem;color:var(--muted)}
+.warn{color:var(--warn)}
+</style>
+</head>
+<body>
+<div class="top">
+  <label for="city">Şehir:</label>
+  <select id="city"></select>
+</div>
+<div class="grid">
+  <section class="card">
+    <h2>Şu an saat kaç?</h2>
+    <div class="big" id="clock">--:--<small id="sec"></small></div>
+    <div class="sub" id="date"></div>
+  </section>
+  <section class="card">
+    <h2>Dersin bitimine kaç dakika kaldı?</h2>
+    <div class="top">
+      <label for="end">Ders bitişi:</label>
+      <input type="time" id="end">
+    </div>
+    <div class="big" id="left">--</div>
+    <div class="unit" id="leftUnit">Bitiş saatini girin</div>
+  </section>
+</div>
+<script>
+var CITIES=[["İstanbul","Europe/Istanbul"],["Ankara","Europe/Istanbul"],["İzmir","Europe/Istanbul"],["Bursa","Europe/Istanbul"],["Antalya","Europe/Istanbul"],["Adana","Europe/Istanbul"],["Konya","Europe/Istanbul"],["Trabzon","Europe/Istanbul"],["Erzurum","Europe/Istanbul"],["Diyarbakır","Europe/Istanbul"],["Gaziantep","Europe/Istanbul"],["Samsun","Europe/Istanbul"],["Lefkoşa","Asia/Nicosia"],["Berlin","Europe/Berlin"],["Londra","Europe/London"],["Paris","Europe/Paris"],["Moskova","Europe/Moscow"],["Bakü","Asia/Baku"],["Dubai","Asia/Dubai"],["New York","America/New_York"],["Los Angeles","America/Los_Angeles"],["Tokyo","Asia/Tokyo"],["Pekin","Asia/Shanghai"]];
+var sel=document.getElementById("city"),endIn=document.getElementById("end");
+CITIES.forEach(function(c,i){var o=document.createElement("option");o.value=i;o.textContent=c[0];sel.appendChild(o)});
+try{var s=localStorage.getItem("city");if(s!==null&&CITIES[s])sel.value=s;var e=localStorage.getItem("end");if(e)endIn.value=e}catch(x){}
+function parts(tz){
+  var f=new Intl.DateTimeFormat("tr-TR",{timeZone:tz,hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false,weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  var o={};f.formatToParts(new Date()).forEach(function(p){o[p.type]=p.value});return o;
+}
+function tick(){
+  var tz=CITIES[sel.value][1],p=parts(tz),h=+p.hour%24,m=+p.minute,s=+p.second;
+  document.getElementById("clock").firstChild.nodeValue=(""+h).padStart(2,"0")+":"+(""+m).padStart(2,"0");
+  document.getElementById("sec").textContent=" :"+(""+s).padStart(2,"0");
+  document.getElementById("date").textContent=p.day+" "+p.month+" "+p.year+", "+p.weekday;
+  var L=document.getElementById("left"),U=document.getElementById("leftUnit");
+  if(!endIn.value){L.textContent="--";L.classList.remove("warn");U.textContent="Bitiş saatini girin";return}
+  var t=endIn.value.split(":"),diff=(+t[0])*3600+(+t[1])*60-(h*3600+m*60+s);
+  if(diff<=0){L.textContent="0";L.classList.add("warn");U.textContent="Ders bitti";return}
+  var min=Math.ceil(diff/60);
+  L.textContent=min;L.classList.toggle("warn",min<=5);
+  U.textContent="dakika kaldı"+(min>=60?" ("+Math.floor(min/60)+" sa "+(min%60)+" dk)":"");
+}
+sel.addEventListener("change",function(){try{localStorage.setItem("city",sel.value)}catch(x){}tick()});
+endIn.addEventListener("input",function(){try{localStorage.setItem("end",endIn.value)}catch(x){}tick()});
+tick();setInterval(tick,1000);
+</script>
+</body>
+</html>
